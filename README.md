@@ -1,11 +1,12 @@
 # Infra VPS — julestristan.fr
 
-Stacks Docker Compose du VPS. Reverse-proxy + TLS automatique via Traefik,
-blog basé Hugo sur la landing page.
+Server config:
+reverse-proxy + TLS via Traefik, blog and Ansible setup.
 
 ```
 .
-├── Makefile              # raccourcis (make help)
+├── Makefile              # shortcuts (make help)
+├── ansible/              # server config : SSH, UFW, fail2ban, Docker
 ├── traefik/              # reverse-proxy, Let's Encrypt, headers de sécurité
 │   ├── compose.yaml
 │   ├── dynamic.yml       # middlewares + options TLS (rechargé à chaud)
@@ -20,9 +21,9 @@ blog basé Hugo sur la landing page.
 ## To Install
 
 - Docker + plugin Compose v2
-- `make` (`sudo apt install make`) — sinon lancer les commandes `docker compose` à la main
-- DNS : `julestristan.fr` (et éventuels sous-domaines) → IP du VPS
-- Ports 80 et 443 ouverts sur le pare-feu
+- `make` (`sudo apt install make`) — or `docker compose`
+- DNS : `julestristan.fr` → IP VPS
+- Ports 80 and 443 open on FW
 
 ## Init
 
@@ -36,14 +37,14 @@ make ps
 
 ## Dashboard Traefik
 
-Exposé uniquement sur `127.0.0.1:8080` (jamais public). Depuis le poste local :
+Expose on `127.0.0.1:8080` (jamais public). From local:
 
 ```bash
 ssh -L 8080:localhost:8080 <vps>
-# puis http://localhost:8080/dashboard/
+# and http://localhost:8080/dashboard/
 ```
 
-## Opérations courantes
+## Operations available
 
 | Commande | Effet |
 |---|---|
@@ -64,5 +65,44 @@ ssh -L 8080:localhost:8080 <vps>
 
 ## Security
 
-- **fail2ban** (sshd avec jail: `maxretry = 3`, `bantime = 1d`)
-- **UFW** Seuls les ports `22/tcp` (SSH), `80/tcp` (HTTP) et `443/tcp` (HTTPS) sont ouverts pour l'IP publique
+Configuration in `ansible/` :
+
+- **SSH** connexion par clé uniquement, mot de passe désactivé
+- **fail2ban** jail `sshd` : `maxretry = 3`, `bantime = 1d`, réseau local exempté
+- **UFW** seuls les ports `22/tcp` (SSH), `80/tcp` (HTTP) et `443/tcp` (HTTPS) sont ouverts en entrée
+
+> Les ports publiés par Docker contournent UFW : ne publier sur `0.0.0.0` que ce qui doit
+> être public, et lier le reste à `127.0.0.1` (comme le dashboard Traefik).
+
+## Ansible
+
+Le playbook décrit la configuration du serveur. Il est idempotent : relancé sur un serveur
+conforme, il ne change rien. Il se lance depuis le poste de travail, en SSH par clé.
+
+| Rôle | Effet |
+|---|---|
+| `common` | Paquets de base, mises à jour de sécurité automatiques, utilisateur dans `sudo` |
+| `ssh_hardening` | Connexion par clé uniquement, validation avec `sshd -t` avant rechargement |
+| `firewall` | UFW : autorise SSH en premier, puis 80 et 443, refuse le reste en entrée |
+| `fail2ban` | Jail `sshd` |
+| `docker` | Dépôt officiel, Docker et plugin Compose, sans mise à niveau forcée |
+
+### Lancer le playbook
+
+```bash
+brew install ansible                                         # sur macOS
+ansible-galaxy collection install -r ansible/requirements.yml
+
+make ansible-check    # dry-run : affiche les changements sans rien appliquer
+make ansible-apply    # applique, après relecture du check
+```
+
+Le mot de passe `sudo` est demandé au lancement. Pour un seul rôle :
+`cd ansible && ansible-playbook site.yml --check --diff --ask-become-pass --tags firewall`.
+
+Pour ajouter un nœud, le déclarer dans `ansible/inventory/hosts.yml`, sous le groupe `homelab`.
+
+### Secrets
+
+Aucun secret n'est versionné, et le playbook n'en a pas besoin pour l'instant. Si cela change :
+`ansible-vault encrypt_string`, avec le mot de passe du vault dans `ansible/.vault_pass` (ignoré par Git).
