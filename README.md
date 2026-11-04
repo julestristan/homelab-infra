@@ -71,8 +71,7 @@ Configuration in `ansible/` :
 - **fail2ban** jail `sshd` : `maxretry = 3`, `bantime = 1d`, réseau local exempté
 - **UFW** seuls les ports `22/tcp` (SSH), `80/tcp` (HTTP) et `443/tcp` (HTTPS) sont ouverts en entrée
 
-> Les ports publiés par Docker contournent UFW : ne publier sur `0.0.0.0` que ce qui doit
-> être public, et lier le reste à `127.0.0.1` (comme le dashboard Traefik).
+**IMPORTANT**: Docker has priority over UFW, be careful for 0.0.0.0 exposition w/ docker
 
 ## Ansible
 
@@ -90,17 +89,17 @@ conforme, il ne change rien. Il se lance depuis le poste de travail, en SSH par 
 ### Lancer le playbook
 
 ```bash
-brew install ansible                                         # sur macOS
+brew install ansible
 ansible-galaxy collection install -r ansible/requirements.yml
 
-make ansible-check    # dry-run : affiche les changements sans rien appliquer
-make ansible-apply    # applique, après relecture du check
+make ansible-check    # dry-run : display changes w/o applying it
+make ansible-apply    # Apply after reading check
 ```
 
-Le mot de passe `sudo` est demandé au lancement. Pour un seul rôle :
+`sudo` needed :
 `cd ansible && ansible-playbook site.yml --check --diff --ask-become-pass --tags firewall`.
 
-Pour ajouter un nœud, le déclarer dans `ansible/inventory/hosts.yml`, sous le groupe `homelab`.
+To add a node, declare it in `ansible/inventory/hosts.yml`
 
 ### Secrets
 
