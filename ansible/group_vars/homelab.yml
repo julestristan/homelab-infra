@@ -1,17 +1,14 @@
 ---
-# Valeurs communes à tous les nœuds du groupe homelab.
-# Elles priment sur les valeurs par défaut des rôles (roles/*/defaults/main.yml).
 
 ansible_user: julestristan
 homelab_ssh_port: 22
 
-# ssh_hardening : reproduit la configuration relevée avec `sshd -T`.
+# ssh_hardening : PermitRootLogin and X11Forwarding --> "no"
+# defined in roles/ssh_hardening/defaults/main.yml.
 ssh_hardening_port: "{{ homelab_ssh_port }}"
-ssh_hardening_permit_root_login: prohibit-password
-ssh_hardening_x11_forwarding: "yes"
 ssh_hardening_max_auth_tries: 6
 
-# firewall : le port SSH est géré à part et ne peut pas être retiré par erreur.
+# firewall : SSH port dynamically set to the same as homelab_ssh_port, so that the firewall allows SSH connections.
 firewall_ssh_port: "{{ homelab_ssh_port }}"
 firewall_allowed_tcp_ports:
   - 80

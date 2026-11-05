@@ -18,6 +18,9 @@
 !/ansible/
 !/ansible/**
 
+!/.github/
+!/.github/**
+
 # Ansible : mot de passe du vault et fichiers générés
 /ansible/.vault_pass
 /ansible/**/.vault_pass
