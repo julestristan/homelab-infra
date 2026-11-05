@@ -1,0 +1,35 @@
+---
+- name: Installer le serveur SSH
+  ansible.builtin.apt:
+    name: openssh-server
+    state: present
+
+- name: Lire les informations de l'utilisateur d'administration
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ ssh_hardening_admin_user }}"
+
+- name: Chercher le fichier authorized_keys de l'utilisateur
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.getent_passwd[ssh_hardening_admin_user][4] }}/.ssh/authorized_keys"
+  register: ssh_hardening_authorized_keys
+
+- name: Vérifier qu'une clé SSH est autorisée avant de continuer
+  ansible.builtin.assert:
+    that:
+      - ssh_hardening_authorized_keys.stat.exists
+      - ssh_hardening_authorized_keys.stat.size > 0
+    fail_msg: "Aucune clé dans authorized_keys : arrêt pour ne pas bloquer l'accès SSH."
+
+- name: Déposer la configuration SSH durcie
+  ansible.builtin.template:
+    src: 00-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/00-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Valider et recharger sshd
+
+- name: Appliquer tout de suite les changements SSH
+  ansible.builtin.meta: flush_handlers

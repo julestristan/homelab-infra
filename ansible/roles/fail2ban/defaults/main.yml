@@ -1,0 +1,8 @@
+---
+fail2ban_ssh_port: 22
+fail2ban_maxretry: 3
+fail2ban_bantime: 1d
+fail2ban_ignoreip:
+  - 127.0.0.1/8
+  - ::1
+fail2ban_banaction: iptables-multiport

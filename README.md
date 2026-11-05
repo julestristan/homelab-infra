@@ -76,7 +76,8 @@ Configuration in `ansible/` :
 ## Ansible
 
 Le playbook décrit la configuration du serveur. Il est idempotent : relancé sur un serveur
-conforme, il ne change rien. Il se lance depuis le poste de travail, en SSH par clé.
+conforme, il ne change rien. Il se lance depuis le poste de travail, en SSH par clé, via
+l'alias `debiant-externe` à définir dans `~/.ssh/config` (IP et port restent hors du repo).
 
 | Rôle | Effet |
 |---|---|

@@ -1,0 +1,11 @@
+---
+- name: Valider la configuration de fail2ban
+  ansible.builtin.command: /usr/bin/fail2ban-client --test
+  changed_when: false
+  listen: Valider et redémarrer fail2ban
+
+- name: Redémarrer fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted
+  listen: Valider et redémarrer fail2ban

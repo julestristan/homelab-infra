@@ -1,0 +1,50 @@
+---
+- name: Installer UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: Vérifier la présence de UFW
+  ansible.builtin.stat:
+    path: /usr/sbin/ufw
+  register: firewall_ufw_binary
+
+- name: Signaler que la configuration de UFW n'est pas simulée
+  ansible.builtin.debug:
+    msg: "UFW n'est pas encore installé : sa configuration sera appliquée lors de l'apply."
+  when: not firewall_ufw_binary.stat.exists
+
+- name: Configurer UFW
+  when: firewall_ufw_binary.stat.exists
+  block:
+    - name: Autoriser SSH
+      community.general.ufw:
+        rule: allow
+        port: "{{ firewall_ssh_port | string }}"
+        proto: tcp
+
+    - name: Autoriser les autres ports TCP
+      community.general.ufw:
+        rule: allow
+        port: "{{ item | string }}"
+        proto: tcp
+      loop: "{{ firewall_allowed_tcp_ports }}"
+
+    - name: Refuser par défaut le trafic entrant
+      community.general.ufw:
+        default: deny
+        direction: incoming
+
+    - name: Autoriser par défaut le trafic sortant
+      community.general.ufw:
+        default: allow
+        direction: outgoing
+
+    - name: Activer UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: Activer UFW au démarrage
+      ansible.builtin.service:
+        name: ufw
+        enabled: true

@@ -1,0 +1,4 @@
+---
+# Collection to get ufw
+collections:
+  - name: community.general
