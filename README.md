@@ -1,5 +1,7 @@
 # Infra VPS — julestristan.fr
 
+[![ansible-lint](https://github.com/julestristan/vps-infra/actions/workflows/ansible-lint.yml/badge.svg)](https://github.com/julestristan/vps-infra/actions/workflows/ansible-lint.yml)
+
 Server config:
 reverse-proxy + TLS via Traefik, blog and Ansible setup.
 
@@ -67,7 +69,7 @@ ssh -L 8080:localhost:8080 <vps>
 
 Configuration in `ansible/` :
 
-- **SSH** connexion par clé uniquement, mot de passe désactivé
+- **SSH** connexion par clé uniquement, mot de passe désactivé, connexion root et X11 interdites
 - **fail2ban** jail `sshd` : `maxretry = 3`, `bantime = 1d`, réseau local exempté
 - **UFW** seuls les ports `22/tcp` (SSH), `80/tcp` (HTTP) et `443/tcp` (HTTPS) sont ouverts en entrée
 
