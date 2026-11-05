@@ -1,0 +1,36 @@
+---
+# python3-systemd to read SSHD logs from systemd journal
+- name: Installer fail2ban
+  ansible.builtin.apt:
+    name:
+      - fail2ban
+      - python3-systemd
+    state: present
+
+- name: Vérifier la présence de fail2ban
+  ansible.builtin.stat:
+    path: /usr/bin/fail2ban-client
+  register: fail2ban_binary
+
+- name: Signaler que la configuration de fail2ban n'est pas simulée
+  ansible.builtin.debug:
+    msg: "fail2ban n'est pas encore installé : sa configuration sera appliquée lors de l'apply."
+  when: not fail2ban_binary.stat.exists
+
+- name: Configurer fail2ban
+  when: fail2ban_binary.stat.exists
+  block:
+    - name: Déposer la configuration de la jail sshd
+      ansible.builtin.template:
+        src: jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Valider et redémarrer fail2ban
+
+    - name: Activer et démarrer fail2ban
+      ansible.builtin.service:
+        name: fail2ban
+        enabled: true
+        state: started

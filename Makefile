@@ -1,9 +1,9 @@
-.PHONY: help net up down restart logs ps pull
+.PHONY: help net up down restart logs ps pull ansible-check ansible-apply
 
 STACKS := traefik blog
 
 help: ## load help
-	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 net: ## Crée le réseau Docker partagé "web" (idempotent)
 	@docker network inspect web >/dev/null 2>&1 || docker network create web
@@ -24,3 +24,9 @@ ps: ## Container status
 
 logs: ## Check logs for a service
 	@docker compose -f $(or $(S),traefik)/compose.yaml logs -f --tail=100
+
+ansible-check: ## Ansible dry-run (--check --diff), rien n'est modifié
+	cd ansible && ansible-playbook site.yml --check --diff --ask-become-pass
+
+ansible-apply: ## Applique le playbook Ansible sur le serveur
+	cd ansible && ansible-playbook site.yml --diff --ask-become-pass

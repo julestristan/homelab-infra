@@ -1,0 +1,23 @@
+---
+- name: Installer les paquets de base
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Activer les mises à jour de sécurité automatiques
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+
+- name: Vérifier que l'utilisateur d'administration a accès à sudo
+  ansible.builtin.user:
+    name: "{{ common_admin_user }}"
+    groups: sudo
+    append: true

@@ -1,0 +1,10 @@
+Port {{ ssh_hardening_port }}
+
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+
+PermitRootLogin {{ ssh_hardening_permit_root_login }}
+X11Forwarding {{ ssh_hardening_x11_forwarding }}
+MaxAuthTries {{ ssh_hardening_max_auth_tries }}
