@@ -7,6 +7,13 @@
     group: root
     mode: "0755"
 
+- name: Vérifier si la clé GPG de Docker est présente
+  ansible.builtin.stat:
+    path: /etc/apt/keyrings/docker.asc
+  register: docker_gpg_key
+
+# Download if not found.
+# Adding when: not docker_gpg_key.stat.exists to ensure idempotency
 - name: Télécharger la clé GPG de Docker
   ansible.builtin.get_url:
     url: https://download.docker.com/linux/debian/gpg
@@ -14,6 +21,7 @@
     owner: root
     group: root
     mode: "0644"
+  when: not docker_gpg_key.stat.exists
 
 - name: Déclarer le dépôt officiel de Docker
   ansible.builtin.apt_repository:
