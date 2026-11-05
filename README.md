@@ -1,6 +1,6 @@
-# Infra VPS — julestristan.fr
+# Infra Homelab — julestristan.fr
 
-[![ansible-lint](https://github.com/julestristan/vps-infra/actions/workflows/ansible-lint.yml/badge.svg)](https://github.com/julestristan/vps-infra/actions/workflows/ansible-lint.yml)
+[![ansible-lint](https://github.com/julestristan/homelab-infra/actions/workflows/ansible-lint.yml/badge.svg)](https://github.com/julestristan/homelab-infra/actions/workflows/ansible-lint.yml)
 
 Server config:
 reverse-proxy + TLS via Traefik, blog and Ansible setup.
@@ -24,7 +24,7 @@ reverse-proxy + TLS via Traefik, blog and Ansible setup.
 
 - Docker + plugin Compose v2
 - `make` (`sudo apt install make`) — or `docker compose`
-- DNS : `julestristan.fr` → IP VPS
+- DNS : `julestristan.fr` → IP homelab
 - Ports 80 and 443 open on FW
 
 ## Init
@@ -42,7 +42,7 @@ make ps
 Expose on `127.0.0.1:8080` (jamais public). From local:
 
 ```bash
-ssh -L 8080:localhost:8080 <vps>
+ssh -L 8080:localhost:8080 <homelab>
 # and http://localhost:8080/dashboard/
 ```
 
