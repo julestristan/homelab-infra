@@ -1,110 +1,112 @@
-# Infra Homelab — julestristan.fr
+# Homelab Infrastructure — julestristan.fr
 
 [![ansible-lint](https://github.com/julestristan/homelab-infra/actions/workflows/ansible-lint.yml/badge.svg)](https://github.com/julestristan/homelab-infra/actions/workflows/ansible-lint.yml)
 
-Server config:
-reverse-proxy + TLS via Traefik, blog and Ansible setup.
+Configuration of my homelab server: SSH hardening and provisioning with Ansible,
+reverse proxy with automatic TLS via Traefik, and a self-hosted blog.
 
 ```
 .
 ├── Makefile              # shortcuts (make help)
-├── ansible/              # server config : SSH, UFW, fail2ban, Docker
-├── traefik/              # reverse-proxy, Let's Encrypt, headers de sécurité
+├── ansible/              # server config: SSH, UFW, fail2ban, Docker
+├── traefik/              # reverse proxy, Let's Encrypt, security headers
 │   ├── compose.yaml
-│   ├── dynamic.yml       # middlewares + options TLS (rechargé à chaud)
-│   ├── .env              # ACME_EMAIL, ACME_CASERVER   (non versionné)
-│   └── letsencrypt/      # acme.json                    (non versionné)
-└── blog/                 # Ghost 5 (SQLite)
-    ├── compose.yaml
-    ├── .env              # GHOST_URL, BLOG_HOST         (non versionné)
-    └── content/          # données + thèmes + images    (non versionné)
+│   ├── dynamic.yml       # middlewares + TLS
+│   ├── .env              # ACME_EMAIL, ACME_CASERVER
+│   └── letsencrypt/      # acme.json
+└── blog/                 # optional, separate repo: Blog based on Hugo
 ```
 
-## To Install
+The blog can be found in its own repository: **[julestristan/blog](https://github.com/julestristan/blog)**.
+It is cloned into `blog/` (git-ignored here) and picked up automatically by the Makefile when present.
 
-- Docker + plugin Compose v2
-- `make` (`sudo apt install make`) — or `docker compose`
-- DNS : `julestristan.fr` → IP homelab
-- Ports 80 and 443 open on FW
+## Requirements
 
-## Init
+- Docker + Compose v2 plugin
+- `make` (`sudo apt install make`), or plain `docker compose`
+- DNS: `julestristan.fr` → Server running on a docker container
+- Ports 80 and 443 open on the router/firewall
+
+## Getting started
 
 ```bash
-cp traefik/.env.example traefik/.env   # puis éditer
-cp blog/.env.example   blog/.env       # puis éditer
+cp traefik/.env.example traefik/.env   # then edit
 
-make up        # Create "web" internal docker network + run docker services
+# Optional: blog stack
+git clone https://github.com/julestristan/blog.git blog
+cp blog/.env.example blog/.env         # then edit
+
+make up        # create the shared "web" Docker network, then start the containers
 make ps
 ```
 
-## Dashboard Traefik
+Stacks are started in order (`traefik`, then `blog`); any stack whose `compose.yaml` is missing is skipped.
 
-Expose on `127.0.0.1:8080` (jamais public). From local:
+## Traefik dashboard
+
+Bound to `127.0.0.1:8080` only (never exposed publicly). Access it through an SSH tunnel:
 
 ```bash
 ssh -L 8080:localhost:8080 <homelab>
-# and http://localhost:8080/dashboard/
+# then open http://localhost:8080/dashboard/
 ```
 
-## Operations available
+## Operations
 
-| Commande | Effet |
+| Command | Effect |
 |---|---|
-| `make up` / `make down` | start / stop a service |
-| `make restart` | restart all |
-| `make pull` | update docker images |
-| `make logs S=blog` | follow logs |
-| `make ps` | container status |
+| `make up` / `make down` | Start / stop the stacks |
+| `make restart` | Restart all stacks |
+| `make pull` | Pull updated Docker images |
+| `make logs S=blog` | Follow logs of a stack (default: `traefik`) |
+| `make ps` | Container status |
 
-## Notes
+## Network notes
 
-- Voir pourquoi le routing en interne est bloqué
-- Ajouter règle firewall IPv6 sur la box pour router les demandes HTTP / HTTPS (voir pour NAT loopback)
-- Whitelist le port 22 de la box internet pour connexion SSH externe (done)
+- Investigate why internal routing (NAT loopback) is blocked
+- Add an IPv6 firewall rule on the ISP router to forward HTTP/HTTPS
+- Allow port 22 on the ISP router for external SSH access (done)
 
-![](./img/allow-http&https.png)
-![](./img/allow-ssh.png)
+![Router rule: allow HTTP and HTTPS](./img/allow-http&https.png)
+![Router rule: allow SSH](./img/allow-ssh.png)
 
 ## Security
 
-Configuration in `ansible/` :
+Configured in `ansible/`:
 
-- **SSH** connexion par clé uniquement, mot de passe désactivé, connexion root et X11 interdites
-- **fail2ban** jail `sshd` : `maxretry = 3`, `bantime = 1d`, réseau local exempté
-- **UFW** seuls les ports `22/tcp` (SSH), `80/tcp` (HTTP) et `443/tcp` (HTTPS) sont ouverts en entrée
+- **SSH**: key-based authentication only, password login disabled, root login and X11 forwarding disabled
+- **fail2ban**: `sshd` jail with `maxretry = 3`, `bantime = 1d`, local network whitelisted
+- **UFW**: only `22/tcp` (SSH), `80/tcp` (HTTP) and `443/tcp` (HTTPS) allowed inbound
 
-**IMPORTANT**: Docker has priority over UFW, be careful for 0.0.0.0 exposition w/ docker
+**IMPORTANT**: Docker-published ports bypass UFW rules. Be careful when binding containers to `0.0.0.0`.
 
 ## Ansible
 
-Le playbook décrit la configuration du serveur. Il est idempotent : relancé sur un serveur
-conforme, il ne change rien. Il se lance depuis le poste de travail, en SSH par clé, via
-l'alias `debiant-externe` à définir dans `~/.ssh/config` (IP et port restent hors du repo).
+The playbook describes the server configuration. It is idempotent: running it against a compliant
+server changes nothing.
 
-| Rôle | Effet |
+| Role | Effect |
 |---|---|
-| `common` | Paquets de base, mises à jour de sécurité automatiques, utilisateur dans `sudo` |
-| `ssh_hardening` | Connexion par clé uniquement, validation avec `sshd -t` avant rechargement |
-| `firewall` | UFW : autorise SSH en premier, puis 80 et 443, refuse le reste en entrée |
-| `fail2ban` | Jail `sshd` |
-| `docker` | Dépôt officiel, Docker et plugin Compose, sans mise à niveau forcée |
+| `common` | Base packages, unattended security upgrades, admin user in `sudo` |
+| `ssh_hardening` | Key-only authentication, config validated with `sshd -t` before reload |
+| `firewall` | UFW: allow SSH first, then 80 and 443, deny all other inbound traffic |
+| `fail2ban` | `sshd` jail |
+| `docker` | Official Docker repository, Docker Engine and Compose plugin, no forced upgrades |
 
-### Lancer le playbook
+### Running the playbook
 
 ```bash
 brew install ansible
 ansible-galaxy collection install -r ansible/requirements.yml
 
-make ansible-check    # dry-run : display changes w/o applying it
-make ansible-apply    # Apply after reading check
+make ansible-check    # dry run: show changes without applying them
+make ansible-apply    # apply, after reviewing the output from the previous check
 ```
 
-`sudo` needed :
-`cd ansible && ansible-playbook site.yml --check --diff --ask-become-pass --tags firewall`.
+Run a single role with its tag (`sudo` password required):
 
-To add a node, declare it in `ansible/inventory/hosts.yml`
+```bash
+cd ansible && ansible-playbook site.yml --check --diff --ask-become-pass --tags firewall
+```
 
-### Secrets
-
-Aucun secret n'est versionné, et le playbook n'en a pas besoin pour l'instant. Si cela change :
-`ansible-vault encrypt_string`, avec le mot de passe du vault dans `ansible/.vault_pass` (ignoré par Git).
+To add a node (host), declare it in `ansible/inventory/hosts.yml`.
