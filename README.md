@@ -110,3 +110,8 @@ cd ansible && ansible-playbook site.yml --check --diff --ask-become-pass --tags 
 ```
 
 To add a node (host), declare it in `ansible/inventory/hosts.yml`.
+
+Ideas:
+- Vaultwarden
+- Tailscale
+- Others..
